@@ -1,0 +1,63 @@
+参考链接:https://www.hollischuang.com/archives/3186?utm_source=wechat_session&utm_medium=social&utm_oi=669184931218067456
+StringBuilder<StringBuffer<concat<+<StringUtils.join
+
+StringBuffer在StringBuilder的基础上，做了同步处理，所以在耗时上会相对多一些。
+
+StringUtils.join也是使用了StringBuilder，并且其中还是有很多其他操作，所以耗时较长，这个也容易理解。其实StringUtils.join更擅长处理字符串数组或者列表的拼接。
+
+那么问题来了，前面我们分析过，其实使用+拼接字符串的实现原理也是使用的StringBuilder，那为什么结果相差这么多，高达1000多倍呢？
+
+字符串不变性与字符串拼接
+
+其实，所有的所谓字符串拼接，都是重新生成了一个新的字符串。下面一段字符串拼接代码：
+
+String s = "abcd";
+s = s.concat("ef");
+其实最后我们得到的s已经是一个新的字符串了。如下图
+
+￼
+
+s中保存的是一个重新创建出来的String对象的引用。
+
+那么，在Java中，到底如何进行字符串拼接呢？字符串拼接有很多种方式，这里简单介绍几种比较常用的。
+
+
+StringBuilder wechat = new StringBuilder("Hollis");
+String introduce = "每日更新Java相关技术文章";
+StringBuilder hollis = wechat.append(",").append(introduce);
+
+
+总结：
+本文介绍了什么是字符串拼接，虽然字符串是不可变的，但是还是可以通过新建字符串的方式来进行字符串的拼接。
+
+常用的字符串拼接方式有五种，分别是使用+、使用concat、使用StringBuilder、使用StringBuffer以及使用StringUtils.join。
+
+由于字符串拼接过程中会创建新的对象，所以如果要在一个循环体中进行字符串拼接，就要考虑内存问题和效率问题。
+
+因此，经过对比，我们发现，直接使用StringBuilder的方式是效率最高的。因为StringBuilder天生就是设计来定义可变字符串和字符串的变化操作的。
+
+但是，还要强调的是：
+
+1、如果不是在循环体中进行字符串拼接的话，直接使用+就好了。
+
+2、如果在并发场景中进行字符串拼接的话，要使用StringBuffer来代替StringBuilder。
+
+如果String通过"+"来拼接，如果拼接的字符串是常量，则效率会非常高，因为会进行编译时优化，这个时候StringBuilder的append()是达不到的。
+
+如果将String的"+"放在循环中，会创建很多的StringBuilder对象，并且执行之后会调用toString()生成新的String对象，这些对象会占用大量的内存空间
+而导致频繁的GC，从而效率变慢。
+
+StringBuilder.append()中间过程中产生的垃圾内存大多数都是小块的内存，锁产生的垃圾就是拼接的对象以及扩容原来的空间(当发生String的"+"操作时，
+前一次String的"+"操作的结果就成了内存垃圾，垃圾会越来越多，最后扩容也会产生很多垃圾)
+
+注意的是，并不是String的"+"操作本身慢，而是因为大循环中大量的内存使用，开销比较大，会导致频繁的GC，并且很多时候程序慢是因为频繁GC导致的
+而且更多的是FULL GC，效率才会下降。
+
+如果是少量的小字符串叠加，那么采用append()提升效率并不明显，但是遇到大量的字符串叠加或者大字符串叠加的时候，使用append的效率会高很多。
+
+最后有一个优化常识：
+在JVM中，提倡的重点是让这个"线程内所使用的内存"尽快结束，以便让JVM认为它是垃圾，在Young空间就尽量释放掉，尽量不要让其进入Old区域，一个
+重要的因素是代码是否跑得够快，其次是分配的空间要足够小。
+
+当然优化也要看场景，世事无绝对。
+
